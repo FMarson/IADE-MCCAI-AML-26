@@ -233,6 +233,7 @@ for name, model in models.items():
     display.plot(cmap="Blues")
     plt.title(name)
     plt.show()
+    plt.savefig(f"{name}_confusion_matrix.png")
 
     print(f"Finished evaluating: {name}")
 
