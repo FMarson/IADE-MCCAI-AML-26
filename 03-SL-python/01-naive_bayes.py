@@ -43,7 +43,7 @@ y = df["label"]
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
-    test_size=0.25,
+    test_size=0.25, #25% of the data will be used for testing
     random_state=42,
     stratify=y
 )
@@ -69,7 +69,7 @@ model.fit(
 
 
 # 7. Make predictions
-y_pred = model.predict(X_test_vectorized)
+y_pred = model.predict(X_test_vectorized) # 25% of the data
 
 
 # 8. Confusion matrix
