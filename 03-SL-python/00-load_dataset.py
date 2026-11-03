@@ -1,7 +1,7 @@
 import pandas as pd
 
 df = pd.read_csv(
-    "SMSSpamCollection",
+    "./data/SMSSpamCollection",
     sep="\t",
     header=None,
     names=["label", "message"]

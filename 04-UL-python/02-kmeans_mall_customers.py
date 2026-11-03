@@ -1,5 +1,5 @@
 # Required packages:
-# pip install pandas numpy matplotlib seaborn scikit-learn
+# py -m pip install pandas numpy matplotlib seaborn scikit-learn
 
 import warnings
 from pathlib import Path
@@ -25,8 +25,7 @@ sns.set_theme(style="whitegrid")
 # ------------------------------------------------------------
 print("\n[1/9] Loading the dataset...")
 
-file_path = Path("mall_customers.csv")
-
+file_path = Path("./data/mall_customers.csv")
 if not file_path.exists():
     raise FileNotFoundError(
         f"Could not find '{file_path}'. "
@@ -130,7 +129,11 @@ axes[1].set_title("Spending Score Distribution")
 axes[1].set_xlabel("Spending Score (1-100)")
 
 plt.tight_layout()
-plt.show()
+plt.savefig(
+    "./figures/00_data_exploration.png",
+    dpi=300,
+    bbox_inches="tight"
+)
 
 
 # ------------------------------------------------------------
@@ -286,7 +289,7 @@ plt.title("Choosing the Number of Clusters")
 fig.tight_layout()
 
 plt.savefig(
-    "01_model_evaluation.png",
+    "./figures/01_model_evaluation.png",
     dpi=300,
     bbox_inches="tight"
 )
@@ -357,12 +360,10 @@ plt.legend(title="Cluster")
 plt.tight_layout()
 
 plt.savefig(
-    "02_customer_clusters.png",
+    "./figures/02_customer_clusters.png",
     dpi=300,
     bbox_inches="tight"
 )
-
-plt.show()
 
 
 # ------------------------------------------------------------
@@ -420,19 +421,20 @@ df["Cluster Description"] = df["Cluster"].map(description_by_cluster)
 
 # Save the labeled customer data.
 df.to_csv(
-    "mall_customers_with_clusters.csv",
+    "./extras/mall_customers_with_clusters.csv",
     index=False
 )
 
 # Save the cluster summary.
 cluster_summary.to_csv(
-    "cluster_summary.csv"
+    "./extras/cluster_summary.csv",
 )
 
 print("\nFiles saved:")
-print("- 01_model_evaluation.png")
-print("- 02_customer_clusters.png")
-print("- mall_customers_with_clusters.csv")
-print("- cluster_summary.csv")
+print("- ./figures/00_data_exploration.png")
+print("- ./figures/01_model_evaluation.png")
+print("- ./figures/02_customer_clusters.png")
+print("- ./extras/mall_customers_with_clusters.csv")
+print("- ./extras/cluster_summary.csv")
 
 print("\nK-Means analysis completed successfully.")

@@ -28,7 +28,7 @@ print("Starting program...")
 print("\n[1/9] Loading the dataset...")
 
 df = pd.read_csv(
-    "SMSSpamCollection",
+    "./data/SMSSpamCollection",
     sep="\t",
     header=None,
     names=["label", "message"]
@@ -232,9 +232,7 @@ for name, model in models.items():
 
     display.plot(cmap="Blues")
     plt.title(name)
-    plt.show()
-    plt.savefig(f"{name}_confusion_matrix.png")
-
+    plt.savefig(f"./figures/all/{name.replace(' ', '_')}_cm.png")
     print(f"Finished evaluating: {name}")
 
 
@@ -247,7 +245,7 @@ print("\nModel comparison:")
 print(results_df.round(3))
 
 
-# 9. Classify new messages
+# 9. Classify necdw messages
 print("\n[9/9] Classifying new messages...")
 
 new_messages = [

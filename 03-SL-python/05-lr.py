@@ -18,7 +18,7 @@ from sklearn.metrics import (
 
 # 1. Load the dataset
 df = pd.read_csv(
-    "SMSSpamCollection",
+    "./data/SMSSpamCollection",
     sep="\t",
     header=None,
     names=["label", "message"]
@@ -86,7 +86,7 @@ display = ConfusionMatrixDisplay(
 
 display.plot(cmap="Blues")
 plt.title("Logistic Regression")
-plt.show()
+plt.savefig("./figures/05_lr_cm.png")
 
 
 # 9. Calculate metrics
