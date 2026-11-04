@@ -1,0 +1,7 @@
+Cluster,Customers,Average_Age,Average_Income,Average_Spending_Score,Is_Noise,Description
+-1,73,36.97,61.66,49.03,True,Noise / unassigned
+0,7,23.86,18.71,76.43,False,Low income / high spending
+1,79,42.89,54.42,50.22,False,Low income / high spending
+2,21,33.14,75.1,82.76,False,High income / high spending
+3,14,37.79,75.93,10.07,False,High income / low spending
+4,6,48.5,90.17,13.33,False,High income / low spending

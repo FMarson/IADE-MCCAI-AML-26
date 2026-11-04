@@ -6,9 +6,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import hdbscan
-
+from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
+from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 
@@ -20,8 +20,8 @@ sns.set_theme(style="whitegrid")
 # ------------------------------------------------------------
 # 1. Create output directories
 # ------------------------------------------------------------
-FIGURE_DIR = Path("./figures/04b")
-EXTRA_DIR = Path("./extras/04b")
+FIGURE_DIR = Path("./figures/04")
+EXTRA_DIR = Path("./extras/04")
 
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 EXTRA_DIR.mkdir(parents=True, exist_ok=True)
@@ -30,7 +30,7 @@ EXTRA_DIR.mkdir(parents=True, exist_ok=True)
 # ------------------------------------------------------------
 # 2. Load the dataset
 # ------------------------------------------------------------
-print("\n[1/9] Loading the dataset...")
+print("\n[1/10] Loading the dataset...")
 
 file_path = Path("./data/mall_customers.csv")
 
@@ -54,7 +54,7 @@ print(df.head())
 # ------------------------------------------------------------
 # 3. Inspect and clean the data
 # ------------------------------------------------------------
-print("\n[2/9] Inspecting and cleaning the data...")
+print("\n[2/10] Inspecting and cleaning the data...")
 
 print("\nColumn names:")
 print(df.columns.tolist())
@@ -95,7 +95,7 @@ print(f"\nRows after cleaning: {len(df)}")
 # ------------------------------------------------------------
 # 4. Select and scale the features
 # ------------------------------------------------------------
-print("\n[3/9] Selecting and scaling the features...")
+print("\n[3/10] Selecting and scaling the features...")
 
 feature_columns = [
     "Annual Income (k$)",
@@ -114,23 +114,65 @@ print(f"\nScaled data shape: {X_scaled.shape}")
 
 
 # ------------------------------------------------------------
-# 5. Compare HDBSCAN parameters
+# 5. Estimate suitable eps values
 # ------------------------------------------------------------
-print("\n[4/9] Testing HDBSCAN parameters...")
+print("\n[4/10] Estimating DBSCAN eps values...")
 
-min_cluster_size_values = [5, 8, 10, 12, 15, 20]
-min_samples_values = [None, 3, 5, 8, 10]
+min_samples_for_search = 5
+
+nearest_neighbors = NearestNeighbors(
+    n_neighbors=min_samples_for_search
+)
+
+nearest_neighbors.fit(X_scaled)
+
+distances, indices = nearest_neighbors.kneighbors(X_scaled)
+
+# Distance to the k-th nearest neighbor.
+k_distances = np.sort(
+    distances[:, min_samples_for_search - 1]
+)
+
+plt.figure(figsize=(10, 5))
+
+plt.plot(
+    range(1, len(k_distances) + 1),
+    k_distances,
+    color="navy",
+    linewidth=2
+)
+
+plt.title(
+    f"k-distance graph, k = {min_samples_for_search}"
+)
+
+plt.xlabel("Sorted observations")
+plt.ylabel(f"Distance to neighbor {min_samples_for_search}")
+
+plt.tight_layout()
+plt.savefig(
+    FIGURE_DIR / "01_dbscan_k_distance.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+
+# ------------------------------------------------------------
+# 6. Compare DBSCAN parameters
+# ------------------------------------------------------------
+print("\n[5/10] Testing DBSCAN parameters...")
+
+eps_values = np.arange(0.15, 1.01, 0.05)
+min_samples_values = [3, 4, 5, 6, 8, 10]
 
 evaluation_rows = []
 
-for min_cluster_size in min_cluster_size_values:
-    for min_samples in min_samples_values:
-        model = hdbscan.HDBSCAN(
-            min_cluster_size=min_cluster_size,
-            min_samples=min_samples,
-            metric="euclidean",
-            cluster_selection_method="eom",
-            prediction_data=True
+for min_samples in min_samples_values:
+    for eps in eps_values:
+        model = DBSCAN(
+            eps=float(eps),
+            min_samples=int(min_samples),
+            metric="euclidean"
         )
 
         labels = model.fit_predict(X_scaled)
@@ -158,8 +200,8 @@ for min_cluster_size in min_cluster_size_values:
             score = np.nan
 
         evaluation_rows.append({
-            "min_cluster_size": min_cluster_size,
-            "min_samples": min_samples,
+            "eps": float(eps),
+            "min_samples": int(min_samples),
             "n_clusters": n_clusters,
             "noise_points": n_noise,
             "noise_fraction": n_noise / len(labels),
@@ -174,18 +216,18 @@ valid_results = results.dropna(
 
 if valid_results.empty:
     raise ValueError(
-        "No HDBSCAN configuration produced at least "
+        "No DBSCAN configuration produced at least "
         "two non-noise clusters."
     )
 
-# Avoid selecting a solution where most observations are noise.
+# Avoid choosing a solution with almost all points classified as noise.
 valid_results = valid_results[
     valid_results["noise_fraction"] <= 0.40
 ].copy()
 
 if valid_results.empty:
     raise ValueError(
-        "All valid HDBSCAN configurations classified more "
+        "All valid DBSCAN configurations classified more "
         "than 40% of the observations as noise."
     )
 
@@ -193,80 +235,53 @@ best_row = valid_results.loc[
     valid_results["Silhouette Score"].idxmax()
 ]
 
-best_min_cluster_size = int(
-    best_row["min_cluster_size"]
-)
+best_eps = float(best_row["eps"])
+best_min_samples = int(best_row["min_samples"])
+best_score = float(best_row["Silhouette Score"])
 
-best_min_samples_value = best_row["min_samples"]
-
-if pd.isna(best_min_samples_value):
-    best_min_samples = None
-else:
-    best_min_samples = int(best_min_samples_value)
-
-best_score = float(
-    best_row["Silhouette Score"]
-)
-
-print("\nBest HDBSCAN configuration:")
+print("\nBest DBSCAN configuration:")
 print(best_row.to_string())
 
 print(
-    f"\nSelected min_cluster_size: "
-    f"{best_min_cluster_size}"
+    f"\nSelected eps: {best_eps:.2f}"
 )
 
 print(
-    f"Selected min_samples: "
-    f"{best_min_samples}"
+    f"Selected min_samples: {best_min_samples}"
 )
 
 print(
-    f"Selected silhouette score: "
-    f"{best_score:.4f}"
+    f"Selected silhouette score: {best_score:.4f}"
 )
 
 results.to_csv(
-    EXTRA_DIR / "hdbscan_parameter_evaluation.csv",
+    EXTRA_DIR / "dbscan_parameter_evaluation.csv",
     index=False
 )
 
 
 # ------------------------------------------------------------
-# 6. Plot evaluation results
+# 7. Plot evaluation results
 # ------------------------------------------------------------
-print("\n[5/9] Plotting HDBSCAN evaluation results...")
+print("\n[6/10] Plotting DBSCAN evaluation results...")
 
 plot_data = valid_results.copy()
-
-plot_data["min_samples_label"] = (
-    plot_data["min_samples"]
-    .fillna(0)
-    .astype(int)
-    .astype(str)
-)
 
 plt.figure(figsize=(10, 6))
 
 sns.scatterplot(
     data=plot_data,
-    x="min_cluster_size",
+    x="eps",
     y="Silhouette Score",
-    hue="min_samples_label",
+    hue="min_samples",
     size="n_clusters",
     palette="viridis",
     sizes=(50, 250),
     alpha=0.85
 )
 
-best_min_samples_label = (
-    "0"
-    if best_min_samples is None
-    else str(best_min_samples)
-)
-
 plt.scatter(
-    best_min_cluster_size,
+    best_eps,
     best_score,
     color="red",
     marker="X",
@@ -275,36 +290,33 @@ plt.scatter(
     zorder=5
 )
 
-plt.title("HDBSCAN Parameter Evaluation")
-plt.xlabel("min_cluster_size")
+plt.title("DBSCAN Parameter Evaluation")
+plt.xlabel("eps")
 plt.ylabel("Silhouette score")
 plt.legend(
-    title="min_samples, 0 = None",
+    title="min_samples",
     bbox_to_anchor=(1.02, 1),
     loc="upper left"
 )
 
 plt.tight_layout()
 plt.savefig(
-    FIGURE_DIR / "01_hdbscan_parameter_evaluation.png",
+    FIGURE_DIR / "02_dbscan_parameter_evaluation.png",
     dpi=300,
     bbox_inches="tight"
 )
 
-plt.show()
 
 
 # ------------------------------------------------------------
-# 7. Train the final HDBSCAN model
+# 8. Train the final DBSCAN model
 # ------------------------------------------------------------
-print("\n[6/9] Training the final HDBSCAN model...")
+print("\n[7/10] Training the final DBSCAN model...")
 
-final_model = hdbscan.HDBSCAN(
-    min_cluster_size=best_min_cluster_size,
+final_model = DBSCAN(
+    eps=best_eps,
     min_samples=best_min_samples,
-    metric="euclidean",
-    cluster_selection_method="eom",
-    prediction_data=True
+    metric="euclidean"
 )
 
 df["Cluster"] = final_model.fit_predict(X_scaled)
@@ -322,14 +334,14 @@ print(f"Noise points: {n_noise}")
 
 
 # ------------------------------------------------------------
-# 8. Visualize the customer segments
+# 9. Visualize the customer segments
 # ------------------------------------------------------------
-print("\n[7/9] Visualizing customer segments...")
+print("\n[8/10] Visualizing customer segments...")
+
+plt.figure(figsize=(10, 6))
 
 plot_df = df.copy()
 plot_df["Cluster Label"] = plot_df["Cluster"].astype(str)
-
-plt.figure(figsize=(10, 6))
 
 sns.scatterplot(
     data=plot_df,
@@ -342,7 +354,7 @@ sns.scatterplot(
 )
 
 plt.title(
-    "Customer Segments Using HDBSCAN"
+    "Customer Segments Using DBSCAN"
 )
 
 plt.xlabel("Annual Income (k$)")
@@ -351,18 +363,17 @@ plt.legend(title="Cluster, -1 = noise")
 
 plt.tight_layout()
 plt.savefig(
-    FIGURE_DIR / "02_hdbscan_clusters.png",
+    FIGURE_DIR / "03_dbscan_clusters.png",
     dpi=300,
     bbox_inches="tight"
 )
 
-plt.show()
 
 
 # ------------------------------------------------------------
-# 9. Create the cluster summary
+# 10. Create the cluster summary
 # ------------------------------------------------------------
-print("\n[8/9] Creating the cluster summary...")
+print("\n[9/10] Creating the cluster summary...")
 
 cluster_summary = (
     df.groupby("Cluster")
@@ -388,9 +399,9 @@ print(cluster_summary)
 
 
 # ------------------------------------------------------------
-# 10. Add descriptive labels
+# 11. Add descriptive labels
 # ------------------------------------------------------------
-print("\n[9/9] Adding cluster descriptions...")
+print("\n[10/10] Adding cluster descriptions...")
 
 income_median = df["Annual Income (k$)"].median()
 score_median = df["Spending Score (1-100)"].median()
@@ -433,7 +444,7 @@ print(cluster_summary)
 
 
 # ------------------------------------------------------------
-# 11. Evaluate the final model
+# 12. Evaluate the final model
 # ------------------------------------------------------------
 non_noise_mask = df["Cluster"] != -1
 
@@ -455,20 +466,21 @@ print(
 
 
 # ------------------------------------------------------------
-# 12. Save the results
+# 13. Save the results
 # ------------------------------------------------------------
 df.to_csv(
-    EXTRA_DIR / "mall_customers_hdbscan.csv",
+    EXTRA_DIR / "mall_customers_dbscan.csv",
     index=False
 )
 
 cluster_summary.to_csv(
-    EXTRA_DIR / "hdbscan_cluster_summary.csv"
+    EXTRA_DIR / "dbscan_cluster_summary.csv"
 )
 
 print("\nFiles saved:")
-print(f"- {FIGURE_DIR / '01_hdbscan_parameter_evaluation.png'}")
-print(f"- {FIGURE_DIR / '02_hdbscan_clusters.png'}")
-print(f"- {EXTRA_DIR / 'mall_customers_hdbscan.csv'}")
-print(f"- {EXTRA_DIR / 'hdbscan_cluster_summary.csv'}")
-print(f"- {EXTRA_DIR / 'hdbscan_parameter_evaluation.csv'}")
+print(f"- {FIGURE_DIR / '01_dbscan_k_distance.png'}")
+print(f"- {FIGURE_DIR / '02_dbscan_parameter_evaluation.png'}")
+print(f"- {FIGURE_DIR / '03_dbscan_clusters.png'}")
+print(f"- {EXTRA_DIR / 'mall_customers_dbscan.csv'}")
+print(f"- {EXTRA_DIR / 'dbscan_cluster_summary.csv'}")
+print(f"- {EXTRA_DIR / 'dbscan_parameter_evaluation.csv'}")

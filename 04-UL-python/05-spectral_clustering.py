@@ -239,8 +239,6 @@ plt.savefig(
     bbox_inches="tight"
 )
 
-plt.show()
-
 
 # ------------------------------------------------------------
 # 7. Train the final Spectral Clustering model
@@ -300,8 +298,6 @@ plt.savefig(
     dpi=300,
     bbox_inches="tight"
 )
-
-plt.show()
 
 
 # ------------------------------------------------------------
