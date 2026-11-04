@@ -1,0 +1,6 @@
+Cluster,Customers,Average_Age,Average_Income,Average_Spending_Score,Description
+0,32,41.0,89.41,15.59,High income / low spending
+1,39,32.69,86.54,82.13,High income / high spending
+2,85,42.48,55.81,49.13,Low income / low spending
+3,21,25.33,25.1,80.05,Low income / high spending
+4,23,45.22,26.3,20.91,Low income / low spending

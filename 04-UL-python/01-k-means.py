@@ -71,5 +71,4 @@ ax1.legend(lines, labels, loc="center right")
 
 plt.title("Elbow Method and Silhouette Score")
 fig.tight_layout()
-plt.savefig("./figures/elbow_silhouette.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("./figures/01/01-elbow_silhouette.png")
